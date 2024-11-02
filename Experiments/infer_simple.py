@@ -6,7 +6,25 @@ import os
 import matplotlib.pyplot as plt
 from torchmetrics.functional import peak_signal_noise_ratio as psnr
 from torchmetrics.functional import structural_similarity_index_measure as ssim
-from model import AttentionUNet
+import torch.nn as nn
+import segmentation_models_pytorch as smp
+import gdown
+
+class AttentionUNet(nn.Module):
+    def __init__(self, encoder_name='resnet34', pretrained=True):
+        super(AttentionUNet, self).__init__()
+        # Use a pre-trained encoder (either ResNet or EfficientNet)
+        self.model = smp.Unet(
+            encoder_name=encoder_name,        # Choose the encoder ('resnet34', 'efficientnet-b3', etc.)
+            encoder_weights='imagenet' if pretrained else None,  # Use ImageNet weights if pretrained
+            in_channels=3,                    # Number of input channels (RGB images)
+            classes=3,                        # Number of output channels (RGB output)
+            decoder_attention_type='scse'     # Use spatial and channel-wise attention
+        )
+        
+    def forward(self, x):
+        return self.model(x)
+
 
 # Define the transformation 
 transform = transforms.Compose([
@@ -115,10 +133,34 @@ def infer_and_evaluate(model, input_folder, ground_truth_folder=None, mask_folde
 
 # Usage example:
 # Define paths
+# Define the Google Drive file ID and download path
+file_id = '1gGiza9UsHM679TDlvn-1fhhu6V2Y0hS2'
+url = f'https://drive.google.com/uc?id={file_id}'
+checkpoint_path = 'Model/checkpoint_epoch_18.pth'
+
+# Check if the checkpoint file exists, if not, download it
+if not os.path.exists(checkpoint_path):
+    os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+    print("Checkpoint file not found locally. Downloading from Google Drive...")
+    gdown.download(url, checkpoint_path, quiet=False)
+    print("Download complete.")
+
+# Now load the checkpoint with torch.load
+checkpoint = torch.load(checkpoint_path)
+
+# Example: Load the model's state_dict
+# Assuming `model` is your model instance
+# model.load_state_dict(checkpoint['model_state_dict'])
+print("Checkpoint loaded successfully.")
 checkpoint_path = 'Model/checkpoint_epoch_18.pth'  # Specify the exact path to the desired checkpoint
+
+
+## USER INPUT HERE , 
 input_folder = 'structured_data/val/degraded'
 ground_truth_folder = 'structured_data/val/ground_truth'  # Set to None if not available
 mask_folder = 'structured_data/val/defect_mask'  # Include mask if available
+
+
 save_output_folder = 'output_results'
 
 # Load the model
