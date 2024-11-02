@@ -9,6 +9,10 @@ structured_data/
 strucutred_data-Copy/
 experiments/model_outputs/
 
+
+#Zip file
+*.zip
+
 # C extensions
 *.so
 
