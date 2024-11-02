@@ -186,70 +186,7 @@ def infer_and_evaluate(model, input_folder, ground_truth_folder, mask_folder, sa
     pdf.output(pdf_file)
     print(f"Report saved at: {pdf_file}")
 
-import shutil
-
-# Function to rearrange and rename files as per desired structure
-def rearrange_and_rename_files(src_dir, dest_dir):
-    """
-    Rearranges the folder structure from:
-    - src_dir/Class/Train/[Defect_mask/defect_type/images, Degraded_image/defect_type/images, clean_image/defect_type/images]
-    
-    To:
-    - dest_dir/Train_or_Val/class_name_defect_type/Defect/images, Degraded/images, Ground_Truth/images
-    
-    Args:
-        src_dir (str): The source directory of the original structure.
-        dest_dir (str): The destination directory for the new structure.
-    """
-    # Loop through each class in the source directory
-    for class_name in os.listdir(src_dir):
-        class_path = os.path.join(src_dir, class_name)
-        if os.path.isdir(class_path):
-            # Process both Train and Val folders
-            for split in ['Train', 'Val']:
-                split_path = os.path.join(class_path, split)
-                if os.path.exists(split_path):
-                    print(f"Processing {split} folder for class: {class_name}")
-
-                    # Loop through categories: Defect_mask, Degraded_image, and clean_image
-                    for category, folder_name in zip(
-                        ['Defect_mask', 'Degraded_image', 'GT_clean_image'],
-                        ['defect_mask','degraded', 'ground_truth']
-                    ):
-                        category_path = os.path.join(split_path, category)
-                        if os.path.exists(category_path):
-                            # Loop through defect types (subclass)
-                            for defect_type in os.listdir(category_path):
-                                defect_type_path = os.path.join(category_path, defect_type)
-
-                                if os.path.isdir(defect_type_path):
-                                    print(f"  Processing defect type: {defect_type} in category: {category}")
-
-                                    # Define the destination directory
-                                    dest_category_path = os.path.join(dest_dir, split, folder_name)
-                                    os.makedirs(dest_category_path, exist_ok=True)
-
-                                    # Copy images with renamed filenames
-                                    for i, filename in enumerate(sorted(os.listdir(defect_type_path)), start=1):
-                                        src_image_path = os.path.join(defect_type_path, filename)
-                                        new_filename = f"{class_name}_{defect_type}_{i:03d}.png"
-                                        dest_image_path = os.path.join(dest_category_path, new_filename)
-                                        
-                                        if os.path.isfile(src_image_path):
-                                            shutil.copy2(src_image_path, dest_image_path)
-                                            print(f"Copied {src_image_path} to {dest_image_path}")
-                                        else:
-                                            print(f"Skipped non-file item: {src_image_path}")
-                        else:
-                            print(f"Category {category} does not exist in {split} for class {class_name}")
-
-
-# Rearrange files in the dataset
-src_dir = 'Dataset/Denoising_Dataset_train_val'  # Source directory of the original dataset structure
-dest_dir = 'Dataset/structured_data'     # Destination directory for the rearranged structure
-rearrange_and_rename_files(src_dir, dest_dir)
-
-# Continue with model loading and evaluation as in your code
+# Example usage
 file_id = '1gGiza9UsHM679TDlvn-1fhhu6V2Y0hS2'
 url = f'https://drive.google.com/uc?id={file_id}'
 checkpoint_path = 'Model/checkpoint_epoch_18.pth'
@@ -266,4 +203,3 @@ save_output_folder = 'output_results'
 
 # Run on the first n images, e.g., n=5
 infer_and_evaluate(model, input_folder, ground_truth_folder, mask_folder, save_output_folder, n_images=5)
-

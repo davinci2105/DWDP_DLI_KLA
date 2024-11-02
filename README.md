@@ -1,58 +1,85 @@
 
-## Folder and File Descriptions
+### Rearranged Dataset Structure
 
-### Data/
-Contains scripts for data preparation and preprocessing. This includes cleaning, inspecting, and preparing the dataset.
+After running the `rearrange_and_rename_files` function, the structure will be modified to:
 
-- **`__init__.py`**: Initializes the `Data` module.
-- **`clean_dataset.py`**: Script to clean raw data, removing any corrupt or irrelevant files.
-- **`inspect_dataset.py`**: Script for inspecting data characteristics, such as image dimensions and pixel distributions.
-- **`prepare.py`**: Prepares the dataset by organizing it according to the model's requirements.
-- **`workflow.ipynb`**: Jupyter notebook that provides an interactive workflow for data processing.
+Dataset/ └── structured_data/ ├── Train/ │ ├── defect_mask/ │ ├── degraded/ │ └── ground_truth/ └── Val/ ├── defect_mask/ ├── degraded/ └── ground_truth/
 
-### Experiments/
-This directory holds the scripts and notebooks necessary for model experimentation and training.
 
-- **`__init__.py`**: Initializes the `Experiments` module.
-- **`Attention_based_unet.ipynb`**: Notebook for experimenting with the Attention U-Net architecture, used in denoising tasks.
-- **`dataset.py`**: Manages dataset loading and processing for model training and evaluation.
-- **`infer_gui.py`**: Script that provides a GUI interface for performing inference using the trained model.
-- **`infer_simple.py`**: Basic script for running inference without a GUI.
-- **`model.py`**: Contains the model architecture, defining layers and structures used in the denoising network.
-- **`test.py`**: Script to test the model's performance on test data, providing metrics for evaluation.
-- **`train.py`**: Training script to train the model on the dataset.
-- **`utils.py`**: Utility functions used across training, testing, and data processing tasks.
+This rearranged structure organizes images by data split (`Train`/`Val`) and category, making them ready for model processing.
 
-### Model/
-Stores model checkpoints, which are saved weights of the model after each epoch or specified training intervals. These can be used to resume training or perform inference.
-
-- **`checkpoint_epoch_xx.pth`**: Saved model checkpoint for epoch `xx`. Multiple checkpoints may be stored for different epochs to track model progress.
-
-### Other Files
-- **`.gitignore`**: Specifies files and folders that should be ignored by Git, such as large data files or sensitive information.
-- **`Denoising_Dataset_train_val.zip`**: Zipped dataset containing training and validation data. It should be extracted before use.
-- **`README.md`**: This README file, providing an overview of the project structure and purpose of each component.
+---
 
 ## Usage
 
-1. **Data Preparation**:
-   - Use scripts in the `Data/` folder to clean, inspect, and prepare your dataset.
-   - For an interactive workflow, open `workflow.ipynb`.
+1. **Rearrange Dataset Files**: Use the `rearrange_and_rename_files` function to structure the dataset as required. This will organize and rename files within the dataset.
 
-2. **Model Training**:
-   - Navigate to `Experiments/` and use `train.py` to start training the model.
-   - You can adjust model architecture in `model.py` and dataset handling in `dataset.py`.
+    ```python
+    src_dir = 'Dataset/Denoising_Dataset_train_val'
+    dest_dir = 'Dataset/structured_data'
+    rearrange_and_rename_files(src_dir, dest_dir)
+    ```
 
-3. **Inference**:
-   - After training, use `infer_simple.py` for quick inference or `infer_gui.py` for a GUI-based inference experience.
-   - Model checkpoints from `Model/` can be loaded for inference.
+2. **Download Model Checkpoint**: The code checks if the model checkpoint exists locally. If not, it will download it from Google Drive.
 
-4. **Testing and Evaluation**:
-   - Use `test.py` to evaluate model performance on test data. Metrics can be adjusted and computed as needed.
+3. **Run Inference and Evaluation**: Use the `infer_and_evaluate` function to process the images, calculate metrics, and create a report.
 
-## Requirements
+   Example usage to process images and create a report:
 
-To run this project, you will need the following Python libraries (listed in `requirements.txt` if available):
+    ```python
+    file_id = '1gGiza9UsHM679TDlvn-1fhhu6V2Y0hS2'
+    url = f'https://drive.google.com/uc?id={file_id}'
+    checkpoint_path = 'Model/checkpoint_epoch_18.pth'
 
-```bash
-pip install -r requirements.txt
+    if not os.path.exists(checkpoint_path):
+        os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
+        gdown.download(url, checkpoint_path, quiet=False)
+
+    model = load_model(checkpoint_path, encoder_name='resnet34')
+    input_folder = 'Dataset/structured_data/Val/degraded'
+    ground_truth_folder = 'Dataset/structured_data/Val/ground_truth'
+    mask_folder = 'Dataset/structured_data/Val/defect_mask'
+    save_output_folder = 'output_results'
+
+    # Run on the first n images, e.g., n=5
+    infer_and_evaluate(model, input_folder, ground_truth_folder, mask_folder, save_output_folder, n_images=5)
+    ```
+
+4. **View Results**: Check the `output_results/` directory for the generated PDF report and metric plots.
+
+---
+
+## Output
+
+The output includes:
+
+1. **PDF Report**: A report named `report.pdf` is generated in `output_results/<timestamp>/`, containing:
+   - Input, ground truth, defect mask, and output images.
+   - PSNR and SSIM metrics for both whole and masked regions.
+
+2. **Average Metrics Plot**: `average_metrics.png`, which shows the mean PSNR and SSIM for each class, saved within the output folder.
+
+---
+
+## Model Details
+
+This project uses an attention UNet model with `scSE` (spatial and channel squeeze and excitation) attention implemented via `segmentation_models_pytorch`. Model features include:
+
+- **Attention Mechanism**: The scSE attention block enhances segmentation and defect preservation.
+- **Configurable Encoder**: The encoder type can be changed in the `load_model()` function (`resnet34` is the default).
+- **Pretrained Weights**: By default, the model uses pretrained weights for the encoder, set to `imagenet`.
+
+---
+
+## Troubleshooting
+
+- **Checkpoint Download Issues**: Ensure you have an active internet connection if the model checkpoint needs downloading.
+- **Missing Folders or Files**: Ensure the dataset folders are named correctly and have the required format before running the rearrangement function.
+- **Dependencies**: Ensure all dependencies from `requirements.txt` are installed, and `torch` and `torchvision` are compatible with your system’s CUDA setup for GPU support.
+- **Metric Calculation Errors**: If you encounter errors with metric calculations, ensure all input images are normalized to a `[0, 1]` range.
+
+---
+
+## License
+
+This project is licensed under the MIT License.
