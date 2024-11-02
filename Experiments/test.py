@@ -243,7 +243,7 @@ def rearrange_and_rename_files(src_dir, dest_dir):
                         else:
                             print(f"Category {category} does not exist in {split} for class {class_name}")
 
-
+## USER INPUT
 # Rearrange files in the dataset
 src_dir = 'Dataset/Denoising_Dataset_train_val'  # Source directory of the original dataset structure
 dest_dir = 'Dataset/structured_data'     # Destination directory for the rearranged structure

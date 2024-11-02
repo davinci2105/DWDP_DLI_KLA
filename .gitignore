@@ -12,7 +12,7 @@ Dataset/data/
 old_data/
 Model/
 Dataset/structured_data/
-
+Results/
 # Zip files
 *.zip
 
