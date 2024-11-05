@@ -277,5 +277,5 @@ mask_folder = f"{root_dir}/Dataset/structured_data/Val/defect_mask/"  # Include 
 save_output_folder = f"{root_dir}/Results/test_results/"
 
 # Run on the first n images, e.g., n=5
-infer_and_evaluate(model, input_folder, ground_truth_folder, mask_folder, save_output_folder, n_images=5)
+infer_and_evaluate(model, input_folder, ground_truth_folder, mask_folder, save_output_folder)
 
