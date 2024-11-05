@@ -14,6 +14,8 @@ Model/
 Dataset/structured_data/
 Results/
 Results_of_metrics/
+Dataset/new_data/
+Visualization_Results/
 # Zip files
 *.zip
 
