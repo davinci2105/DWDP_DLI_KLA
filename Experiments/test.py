@@ -12,6 +12,15 @@ import gdown
 from fpdf import FPDF
 from collections import defaultdict
 import time
+from pathlib import Path
+from pathlib import Path
+
+
+# Set root_dir to the current working directory and move up to the parent folder if needed
+root_dir = Path.cwd() #.parent  
+
+# Verify the directory path
+print("Root directory:", root_dir)
 
 class AttentionUNet(nn.Module):
     def __init__(self, encoder_name='resnet34', pretrained=True):
@@ -28,12 +37,15 @@ class AttentionUNet(nn.Module):
         return self.model(x)
 
 # Define transformations
-transform = transforms.Compose([transforms.ToTensor()])
+transform = transforms.Compose([
+    transforms.Resize((1024, 1024)),  # Resize the image to 1024x1024
+    transforms.ToTensor(),             # Convert the image to a tensor
+])
 
 # Load model
 def load_model(checkpoint_path, encoder_name='resnet34'):
     model = AttentionUNet(encoder_name=encoder_name, pretrained=False)
-    checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
     model.load_state_dict(checkpoint['model_state_dict'])
     model.eval()
     return model.to('cuda' if torch.cuda.is_available() else 'cpu')
@@ -189,81 +201,81 @@ def infer_and_evaluate(model, input_folder, ground_truth_folder, mask_folder, sa
 import shutil
 
 # Function to rearrange and rename files as per desired structure
+import os
+import shutil
+
+# Function to rearrange and rename files from multiple objects into a single directory structure
 def rearrange_and_rename_files(src_dir, dest_dir):
     """
     Rearranges the folder structure from:
-    - src_dir/Class/Train/[Defect_mask/defect_type/images, Degraded_image/defect_type/images, clean_image/defect_type/images]
+    - src_dir/object_name/[Defect_mask/images, Degraded_image/images, GT_clean_image/images]
     
     To:
-    - dest_dir/Train_or_Val/class_name_defect_type/Defect/images, Degraded/images, Ground_Truth/images
+    - dest_dir/defect_mask/images, degraded/images, ground_truth/images
     
     Args:
-        src_dir (str): The source directory of the original structure.
+        src_dir (str): The source directory containing multiple object folders.
         dest_dir (str): The destination directory for the new structure.
     """
-    # Loop through each class in the source directory
-    for class_name in os.listdir(src_dir):
-        class_path = os.path.join(src_dir, class_name)
-        if os.path.isdir(class_path):
-            # Process both Train and Val folders
-            for split in ['Train', 'Val']:
-                split_path = os.path.join(class_path, split)
-                if os.path.exists(split_path):
-                    print(f"Processing {split} folder for class: {class_name}")
+    # Define folder names for categorization
+    categories = {
+        'Defect_mask': 'defect_mask',
+        'Degraded_image': 'degraded',
+        'GT_clean_image': 'ground_truth'
+    }
 
-                    # Loop through categories: Defect_mask, Degraded_image, and clean_image
-                    for category, folder_name in zip(
-                        ['Defect_mask', 'Degraded_image', 'GT_clean_image'],
-                        ['defect_mask','degraded', 'ground_truth']
-                    ):
-                        category_path = os.path.join(split_path, category)
-                        if os.path.exists(category_path):
-                            # Loop through defect types (subclass)
-                            for defect_type in os.listdir(category_path):
-                                defect_type_path = os.path.join(category_path, defect_type)
+    # Create destination folders
+    for folder in categories.values():
+        os.makedirs(os.path.join(dest_dir, folder), exist_ok=True)
 
-                                if os.path.isdir(defect_type_path):
-                                    print(f"  Processing defect type: {defect_type} in category: {category}")
+    # Loop through each object in the source directory
+    for object_name in os.listdir(src_dir):
+        object_path = os.path.join(src_dir, object_name)
+        if os.path.isdir(object_path):
+            print(f"Processing object: {object_name}")
 
-                                    # Define the destination directory
-                                    dest_category_path = os.path.join(dest_dir, split, folder_name)
-                                    os.makedirs(dest_category_path, exist_ok=True)
+            # Loop through each category and copy images to the destination
+            for category, dest_folder in categories.items():
+                category_path = os.path.join(object_path, category)
+                if os.path.exists(category_path):
+                    print(f"  Processing category: {category}")
 
-                                    # Copy images with renamed filenames
-                                    for i, filename in enumerate(sorted(os.listdir(defect_type_path)), start=1):
-                                        src_image_path = os.path.join(defect_type_path, filename)
-                                        new_filename = f"{class_name}_{defect_type}_{i:03d}.png"
-                                        dest_image_path = os.path.join(dest_category_path, new_filename)
-                                        
-                                        if os.path.isfile(src_image_path):
-                                            shutil.copy2(src_image_path, dest_image_path)
-                                            print(f"Copied {src_image_path} to {dest_image_path}")
-                                        else:
-                                            print(f"Skipped non-file item: {src_image_path}")
+                    # Loop through images in the category
+                    for i, filename in enumerate(sorted(os.listdir(category_path)), start=1):
+                        src_image_path = os.path.join(category_path, filename)
+                        new_filename = f"{object_name}_{dest_folder}_{i:03d}.png"  # Rename images
+                        dest_image_path = os.path.join(dest_dir, dest_folder, new_filename)
+
+                        if os.path.isfile(src_image_path):
+                            shutil.copy2(src_image_path, dest_image_path)
+                            print(f"Copied {src_image_path} to {dest_image_path}")
                         else:
-                            print(f"Category {category} does not exist in {split} for class {class_name}")
+                            print(f"Skipped non-file item: {src_image_path}")
+                else:
+                    print(f"Category {category} does not exist for object {object_name}")
 
-## USER INPUT
+
 # Rearrange files in the dataset
-src_dir = 'Dataset/Denoising_Dataset_train_val'  # Source directory of the original dataset structure
-dest_dir = 'Dataset/structured_data'     # Destination directory for the rearranged structure
-rearrange_and_rename_files(src_dir, dest_dir)
+src_dir = f"{root_dir}/Dataset/Denoising_Dataset_train_val"  # give source directory
+dest_dir = f"{root_dir}/Dataset/structured_data_1"     # give destination directory
+# rearrange_and_rename_files(src_dir, dest_dir)
 
 # Continue with model loading and evaluation as in your code
 file_id = '1gGiza9UsHM679TDlvn-1fhhu6V2Y0hS2'
 url = f'https://drive.google.com/uc?id={file_id}'
-checkpoint_path = 'Model/checkpoint_epoch_18.pth'
+checkpoint_path = f"{root_dir}Model/checkpoint_epoch_18.pth"
 
 if not os.path.exists(checkpoint_path):
     os.makedirs(os.path.dirname(checkpoint_path), exist_ok=True)
     gdown.download(url, checkpoint_path, quiet=False)
 
 model = load_model(checkpoint_path, encoder_name='resnet34')
-input_folder = 'Dataset/structured_data/Val/degraded'
-ground_truth_folder = 'Dataset/structured_data/Val/ground_truth'
-mask_folder = 'Dataset/structured_data/Val/defect_mask'
-save_output_folder = 'output_results'
+checkpoint_path = f"{root_dir}/Model/checkpoint_epoch_18.pth"
+input_folder = f"{root_dir}/Dataset/structured_data/Val/degraded/"
+ground_truth_folder = f"{root_dir}/Dataset/structured_data/Val/ground_truth/"  
+mask_folder = f"{root_dir}/Dataset/structured_data/Val/defect_mask/"  # Include mask if available
+save_output_folder = f"{root_dir}/Results/test_results/"
 
 # Run on the first n images, e.g., n=5
-infer_and_evaluate(model, input_folder, ground_truth_folder, mask_folder, save_output_folder, n_images=5)
+infer_and_evaluate(model, input_folder, ground_truth_folder, mask_folder, save_output_folder)
 
